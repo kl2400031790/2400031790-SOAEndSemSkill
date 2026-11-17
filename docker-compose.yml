@@ -1,0 +1,36 @@
+services:
+  app-db:
+    image: postgres:16-alpine
+    container_name: soa-app-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-soa_db}
+      POSTGRES_USER: ${DB_USER:-soa_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-soa_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-soa_user} -d ${DB_NAME:-soa_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app-service:
+    build:
+      context: ./app
+    container_name: soa-app-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: app-db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-soa_db}
+      DB_USER: ${DB_USER:-soa_user}
+      DB_PASSWORD: ${DB_PASSWORD:-soa_password}
+    depends_on:
+      app-db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
